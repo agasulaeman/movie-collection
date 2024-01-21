@@ -13,5 +13,6 @@ public interface MovieService {
     Map<String, Object> delete(Integer id);
     Map<String,Object> findMovieById(Integer id);
     Map<String,Object> findMovieByGenres(String  genres);
+    Map<String,Object> findMovieByTittle(String title);
 
 }

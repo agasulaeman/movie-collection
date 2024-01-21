@@ -8,4 +8,5 @@ public class Constants {
     public final static String success_string = "Success";
     public final static String empty_data_string = "data is empty";
     public final  static String movie_genre_notfound = "Movie Genre not found";
+    public final  static String movie_title_notfound = "Movie title not found";
 }

@@ -39,6 +39,10 @@ public class MovieController {
     public Map<String, Object> findMovieByGenres(@RequestParam("genres") String genres) {
         return movieService.findMovieByGenres(genres);
     }
+    @GetMapping("/findByTitle/{title}")
+    public Map<String, Object> findMovieByTitles(@RequestParam("title") String title) {
+        return movieService.findMovieByTittle(title);
+    }
 
     @DeleteMapping("delete/{id}")
     public Map<String, Object> delete(@RequestParam("id") Integer id) {

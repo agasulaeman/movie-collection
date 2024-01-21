@@ -165,6 +165,36 @@ public class MovieServiceImpl implements MovieService{
         return result;
     }
 
+    @Override
+    public Map<String, Object> findMovieByTittle(String title) {
+        Map<String,Object> result = new HashMap<>();
+        String message = "";
+        try {
+            List<Movie> moviesData =  movieRepository.findByTitle(title);
+
+            if (!moviesData.isEmpty()) {
+                List<MovieResponse> responseMovies = new ArrayList<>();
+                for (Movie movieData : moviesData) {
+                    responseMovies.add(convertMovieToResponseDTO(movieData));
+                }
+
+                message = Constants.success_string;
+                result.put("message", message);
+                result.put(Constants.response, HttpStatus.OK);
+                result.put("Data", responseMovies);
+            } else {
+                result.put("message", Constants.movie_notfound);
+                result.put(Constants.response, Constants.error_code);
+            }
+
+        } catch (Exception e) {
+            result.put("error_code", HttpStatus.INTERNAL_SERVER_ERROR);
+            result.put("message", Constants.movie_title_notfound);
+        }
+
+        return result;
+    }
+
     @Transactional
     private void validateSummaryLength(String summary) {
         int maxSummaryLength = 100;

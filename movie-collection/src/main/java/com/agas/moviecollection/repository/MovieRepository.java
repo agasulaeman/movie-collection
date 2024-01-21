@@ -20,4 +20,9 @@ public interface MovieRepository extends JpaRepository<Movie,Integer> {
             + "WHERE mt.genres = :genres "
             + "AND mt.is_deleted = false", nativeQuery= true)
     List<Movie> findByGenre(@Param("genres") String genres);
+
+    @Query(value="SELECT * FROM movie_table_collection mt "
+            + "WHERE mt.title = :title "
+            + "AND mt.is_deleted = false", nativeQuery= true)
+    List<Movie> findByTitle(@Param("title") String title);
 }
