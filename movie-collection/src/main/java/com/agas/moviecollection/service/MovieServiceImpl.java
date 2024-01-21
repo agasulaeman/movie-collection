@@ -5,6 +5,7 @@ import com.agas.moviecollection.domain.Movie;
 import com.agas.moviecollection.dto.request.MovieRequest;
 import com.agas.moviecollection.dto.response.MovieResponse;
 import com.agas.moviecollection.repository.MovieRepository;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,7 @@ public class MovieServiceImpl implements MovieService{
     @Override
     public MovieResponse createMovie(MovieRequest movieRequest) {
         log.info("Processing add Movie {} {} => ");
+        validateSummaryLength(movieRequest.getSummary());
         Movie movie = Movie.builder()
                 .title(movieRequest.getTitle())
                 .director(movieRequest.getDirector())
@@ -62,7 +64,6 @@ public class MovieServiceImpl implements MovieService{
                 .genres(movieRequest.getGenres())
                 .deleted(false)
                 .build();
-
         Movie saveMovie = movieRepository.save(movie);
 
         MovieResponse response = convertMovieToResponseDTO(saveMovie);
@@ -75,6 +76,7 @@ public class MovieServiceImpl implements MovieService{
         try {
             Movie dataMovie = movieRepository.findByIdTrue(id);
             Movie movieIndex = convertToEntity(request);
+            validateSummaryLength(movieIndex.getSummary());
 
             dataMovie.setTitle(movieIndex.getTitle());
             dataMovie.setDirector(movieIndex.getDirector());
@@ -131,6 +133,44 @@ public class MovieServiceImpl implements MovieService{
             result.put("message",Constants.movie_notfound);
         }
         return result;
+    }
+
+    @Override
+    public Map<String, Object> findMovieByGenres(String genres) {
+        Map<String,Object> result = new HashMap<>();
+        String message = "";
+        try {
+            List<Movie> moviesData =  movieRepository.findByGenre(genres);
+
+            if (!moviesData.isEmpty()) {
+                List<MovieResponse> responseMovies = new ArrayList<>();
+                for (Movie movieData : moviesData) {
+                    responseMovies.add(convertMovieToResponseDTO(movieData));
+                }
+
+                message = Constants.success_string;
+                result.put("message", message);
+                result.put(Constants.response, HttpStatus.OK);
+                result.put("Data", responseMovies);
+            } else {
+                result.put("message", Constants.movie_notfound);
+                result.put(Constants.response, HttpStatus.NOT_FOUND);
+            }
+
+        } catch (Exception e) {
+            result.put("error_code", HttpStatus.INTERNAL_SERVER_ERROR);
+            result.put("message", Constants.movie_genre_notfound);
+        }
+
+        return result;
+    }
+
+    @Transactional
+    private void validateSummaryLength(String summary) {
+        int maxSummaryLength = 100;
+        if (summary.length() > maxSummaryLength) {
+            throw new IllegalArgumentException("Summary length exceeds the maximum allowed length is 100 character");
+        }
     }
 
     private MovieResponse convertMovieToResponseDTO(Movie movie) {

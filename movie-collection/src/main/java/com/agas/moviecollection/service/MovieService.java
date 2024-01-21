@@ -12,4 +12,6 @@ public interface MovieService {
     Map<String,Object> updateMovieById (Integer id,MovieRequest request);
     Map<String, Object> delete(Integer id);
     Map<String,Object> findMovieById(Integer id);
+    Map<String,Object> findMovieByGenres(String  genres);
+
 }
