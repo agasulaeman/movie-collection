@@ -1,6 +1,7 @@
 package com.agas.moviecollection.service;
 
 import com.agas.moviecollection.config.Constants;
+import com.agas.moviecollection.config.errors.MovieException;
 import com.agas.moviecollection.domain.Movie;
 import com.agas.moviecollection.dto.request.MovieRequest;
 import com.agas.moviecollection.dto.response.MovieResponse;
@@ -22,7 +23,7 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class MovieServiceImpl implements MovieService{
+public class MovieServiceImpl implements MovieService {
 
     @Autowired
     private MovieRepository movieRepository;
@@ -30,10 +31,10 @@ public class MovieServiceImpl implements MovieService{
 
     @Override
     public Map<String, Object> getAll() {
-        Map<String,Object> result = new HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         List<MovieResponse> listMovie = new ArrayList<>();
 
-        for (Movie dataMovie: movieRepository.findAll()) {
+        for (Movie dataMovie : movieRepository.findAll()) {
             if (dataMovie.getDeleted().equals(false)) {
                 MovieResponse response = convertMovieToResponseDTO(dataMovie);
                 listMovie.add(response);
@@ -46,7 +47,7 @@ public class MovieServiceImpl implements MovieService{
             message = Constants.empty_data_string;
         }
 
-        result.put(Constants.response , HttpStatus.OK);
+        result.put(Constants.response, HttpStatus.OK);
         result.put("message", message);
         result.put("data", listMovie);
         result.put("total", listMovie.size());
@@ -57,6 +58,7 @@ public class MovieServiceImpl implements MovieService{
     public MovieResponse createMovie(MovieRequest movieRequest) {
         log.info("Processing add Movie {} {} => ");
         validateSummaryLength(movieRequest.getSummary());
+        validateMovieTitle(movieRequest.getTitle());
         Movie movie = Movie.builder()
                 .title(movieRequest.getTitle())
                 .director(movieRequest.getDirector())
@@ -77,7 +79,7 @@ public class MovieServiceImpl implements MovieService{
             Movie dataMovie = movieRepository.findByIdTrue(id);
             Movie movieIndex = convertToEntity(request);
             validateSummaryLength(movieIndex.getSummary());
-
+            validateUpdateMovieById(movieIndex.getTitle());
             dataMovie.setTitle(movieIndex.getTitle());
             dataMovie.setDirector(movieIndex.getDirector());
             dataMovie.setSummary(movieIndex.getSummary());
@@ -85,14 +87,14 @@ public class MovieServiceImpl implements MovieService{
 
             Movie resultInput = movieRepository.save(dataMovie);
 
-            MovieResponse response =   convertMovieToResponseDTO(resultInput);
+            MovieResponse response = convertMovieToResponseDTO(resultInput);
 
             result.put(Constants.response, HttpStatus.OK);
             result.put("message", Constants.success_string);
             result.put("Data", response);
         } catch (Exception e) {
-            result.put("error_code", HttpStatus.NOT_FOUND);
-            result.put("message", Constants.movie_notfound);
+            result.put("error_code", Constants.ERROR_HANDLING_400);
+            result.put("message", Constants.movie_title_already_exists);
         }
         return result;
     }
@@ -118,7 +120,7 @@ public class MovieServiceImpl implements MovieService{
 
     @Override
     public Map<String, Object> findMovieById(Integer id) {
-        Map<String,Object> result = new HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         String message = "";
         try {
             Movie movieData = movieRepository.findByIdTrue(id);
@@ -129,18 +131,18 @@ public class MovieServiceImpl implements MovieService{
             result.put("Data", responseMovie);
 
         } catch (Exception e) {
-            result.put("error_code",HttpStatus.NOT_FOUND);
-            result.put("message",Constants.movie_notfound);
+            result.put("error_code", HttpStatus.NOT_FOUND);
+            result.put("message", Constants.movie_notfound);
         }
         return result;
     }
 
     @Override
     public Map<String, Object> findMovieByGenres(String genres) {
-        Map<String,Object> result = new HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         String message = "";
         try {
-            List<Movie> moviesData =  movieRepository.findByGenre(genres);
+            List<Movie> moviesData = movieRepository.findByGenre(genres);
 
             if (!moviesData.isEmpty()) {
                 List<MovieResponse> responseMovies = new ArrayList<>();
@@ -167,10 +169,10 @@ public class MovieServiceImpl implements MovieService{
 
     @Override
     public Map<String, Object> findMovieByTittle(String title) {
-        Map<String,Object> result = new HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         String message = "";
         try {
-            List<Movie> moviesData =  movieRepository.findByTitle(title);
+            List<Movie> moviesData = movieRepository.findByTitle(title);
 
             if (!moviesData.isEmpty()) {
                 List<MovieResponse> responseMovies = new ArrayList<>();
@@ -203,6 +205,42 @@ public class MovieServiceImpl implements MovieService{
         }
     }
 
+    @Transactional
+    private void validateMovieTitle(String movieTittle) {
+        try {
+            List<Movie> moviesData = movieRepository.findByTitle(movieTittle);
+            if (moviesData != null) {
+                log.info("Movie is has been created before");
+                throw new MovieException(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                        Constants.ERROR_HANDLING_100,
+                        Constants.movie_has_been_created
+                );
+            }
+        } catch (MovieException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Transactional
+    private void validateUpdateMovieById(String movieTittle) {
+        try {
+            List<Movie> moviesData = movieRepository.findByTitle(movieTittle);
+            if (moviesData != null) {
+                log.info("Movie title has been created before");
+                throw new MovieException(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                        Constants.ERROR_HANDLING_400,
+                        Constants.movie_has_been_created
+                );
+            }
+        } catch (MovieException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private MovieResponse convertMovieToResponseDTO(Movie movie) {
         MovieResponse dtoResponse = new MovieResponse();
         LocalDateTime localDateCreateTime = movie.getCreatedAt().atZone(ZoneId.of("Asia/Bangkok")).toLocalDateTime();
@@ -219,7 +257,8 @@ public class MovieServiceImpl implements MovieService{
         dtoResponse.setModifiedAt(updateDate);
         return dtoResponse;
     }
+
     private Movie convertToEntity(MovieRequest movieRequest) {
-        return modelMapper.map(movieRequest,Movie.class);
+        return modelMapper.map(movieRequest, Movie.class);
     }
 }
